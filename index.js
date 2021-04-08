@@ -4,7 +4,8 @@ const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const io = require('socket.io')(server);
-const pair = ['BTC-USD', 'ETH-USD', 'LTC-USD']
+const pair = ['BTC-USD', 'ETH-USD', 'LTC-USD'];
+const clients = [];
 
 const websocket = new Gdax.WebsocketClient(
     pair,
@@ -16,22 +17,33 @@ app.get('/', (req, res) => {
 });
 
 io.on('connection', (socket) => {
-    let clientPair;
+    let clientPair = [];
     let interval;
-    console.log('a user connected', socket.id);
+    let intervalMsgType;
+    let clientId = socket.id;
+    clients.push({id: clientId, time: socket.handshake.time,info: socket.handshake.headers['user-agent']});
+    console.log('a user connected');
     socket.on('disconnect', () => {
         console.log('user disconnected');
+        removeUser(clientId)
     });
 
     socket.on('message', (msg) => {
         if (interval) clearInterval(interval)
-        if (pair.includes(msg)) clientPair = msg;
+        if (pair.includes(msg) && !clientPair.includes(msg)) clientPair.push(msg);
         if (msg === 'quit') {
             socket.off('message', (cb) => {console.log('client quit')});
+            removeUser(clientId)
             return;
         }
-        if (msg === 'u') clientPair = null;
-        if (!clientPair || !msg) {
+        if (msg === 'u') clientPair.length = 0;
+        if (msg === 'show') {
+            for (let item of clients ) {
+                socket.emit('event', `User: ${item.info}, Subscription start: ${item.time}`);
+            }
+            return;
+        }
+        if (!clientPair.length || !msg) {
             return;
         }
 
@@ -39,13 +51,24 @@ io.on('connection', (socket) => {
 
         if (!isNaN(msg)) {
             timeForInterval = parseInt(msg);
-            msg = 's';
         }
 
-        if (msg === 's') {
+        if (msg === 's' || msg === 'm') {
+            intervalMsgType = msg
+        }
+
+        if (intervalMsgType) {
             interval = setInterval(() => {
-                let message = `${clientPair} = ${tickers[clientPair]} (${new Date()})`
-                socket.emit('event', message);
+                let date = new Date();
+                for (let item of clientPair) {
+                    if (tickers[item]) {
+                        let message = (intervalMsgType === 's') ?`${item} = ${tickers[item].price} (${date})` :
+                        `${item} (price = ${tickers[item].price}; timestamp = ${new Date(tickers[item].time).valueOf()}; )`
+                        socket.emit('event', message);
+                    } else {
+                        socket.emit('event', `We do not have data for this pair ${item}`);
+                    }
+                }
             }, timeForInterval);
         }
     });
@@ -61,5 +84,12 @@ websocket.on('message', data => {
     if (!data.product_id) {
         return;
     }
-    tickers[data.product_id] = data.price;
+    tickers[data.product_id] = data;
 });
+
+function removeUser(id) {
+    let index = clients.findIndex(item => item.id === id);
+    if (index >= 0) {
+        clients.splice(index, 1);
+    }
+}
