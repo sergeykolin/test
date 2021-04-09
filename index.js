@@ -4,13 +4,18 @@ const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const io = require('socket.io')(server);
-const pair = ['BTC-USD', 'ETH-USD', 'LTC-USD'];
+// const WebSocket = require('ws')
+// const io = new WebSocket.Server({server});
+const pairs = ['BTC-USD', 'ETH-USD', 'LTC-USD'];
 const clients = [];
 
 const websocket = new Gdax.WebsocketClient(
-    pair,
-    'wss://ws-feed.pro.coinbase.com'
+    pairs,
+    'wss://ws-feed.pro.coinbase.com',
+    null,
+    {"channels": ["full"]}
   );
+
 
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
@@ -19,7 +24,7 @@ app.get('/', (req, res) => {
 io.on('connection', (socket) => {
     let clientPair = [];
     let interval;
-    let intervalMsgType;
+    let timeForInterval = 250;
     let clientId = socket.id;
     clients.push({id: clientId, time: socket.handshake.time,info: socket.handshake.headers['user-agent']});
     console.log('a user connected');
@@ -29,44 +34,55 @@ io.on('connection', (socket) => {
     });
 
     socket.on('message', (msg) => {
-        if (interval) clearInterval(interval)
-        if (pair.includes(msg) && !clientPair.includes(msg)) clientPair.push(msg);
-        if (msg === 'quit') {
+        if (!msg || typeof msg !== 'string') return;
+        let msg_1 = msg.split(' ')[0];
+        let msg_2 = msg.split(' ')[1];
+
+        if (msg_1 === 'XRP-USD') socket.emit('event','error: XRP-USD is not a valid product')
+
+        if (pairs.includes(msg_1)) {
+            let index = clientPair.findIndex(item => item.pair === msg_1)
+            let pair = {pair: msg_1, view: (msg_2 === 'm') ? 'matches view': null};
+            if (!msg_2 || msg_2 === 'm') {
+                if (index < 0 ) {
+                    clientPair.push(pair);
+                } else {
+                    clientPair[index].view = pair.view;
+                }
+            } else if (msg_2 === 'u' && index >= 0) {
+                clientPair.splice(index, 1);
+            }
+        }
+
+        if (msg_1 === 'quit') {
             socket.off('message', (cb) => {console.log('client quit')});
-            removeUser(clientId)
+            removeUser(clientId);
+            if (interval) clearInterval(interval);
             return;
         }
-        if (msg === 'u') clientPair.length = 0;
-        if (msg === 'show') {
+
+        if (msg_1 === 'system' && !msg_2) {
             for (let item of clients ) {
                 socket.emit('event', `User: ${item.info}, Subscription start: ${item.time}`);
             }
             return;
         }
-        if (!clientPair.length || !msg) {
-            return;
+
+        if (msg_1 === 'system' && msg_2 && !isNaN(msg_2)) {
+            timeForInterval = parseInt(msg_2);
         }
 
-        let timeForInterval = 250;
-
-        if (!isNaN(msg)) {
-            timeForInterval = parseInt(msg);
-        }
-
-        if (msg === 's' || msg === 'm') {
-            intervalMsgType = msg
-        }
-
-        if (intervalMsgType) {
+        if (clientPair.length) {
+            if (interval) clearInterval(interval);
             interval = setInterval(() => {
                 let date = new Date();
                 for (let item of clientPair) {
-                    if (tickers[item]) {
-                        let message = (intervalMsgType === 's') ?`${item} = ${tickers[item].price} (${date})` :
-                        `${item} (price = ${tickers[item].price}; timestamp = ${new Date(tickers[item].time).valueOf()}; )`
+                    if (tickers[item.pair]) {
+                        let message = (!item.view) ?`${item.pair} = ${tickers[item.pair].price} (${date})` :
+                        `${item.pair} (price = ${tickers[item.pair].price}; timestamp = ${new Date(tickers[item.pair].time).valueOf()}; size: ${tickers[item.pair].size || tickers[item.pair].remaining_size} )`
                         socket.emit('event', message);
                     } else {
-                        socket.emit('event', `We do not have data for this pair ${item}`);
+                        socket.emit('event', `We do not have data for this pair ${item.pair}`);
                     }
                 }
             }, timeForInterval);
@@ -81,7 +97,7 @@ server.listen(3000, () => {
 let tickers = {};
 
 websocket.on('message', data => {
-    if (!data.product_id) {
+    if (!data.product_id || !data.price) {
         return;
     }
     tickers[data.product_id] = data;
