@@ -3,9 +3,8 @@ const express = require('express');
 const app = express();
 const http = require('http');
 const server = http.createServer(app);
-const io = require('socket.io')(server);
-// const WebSocket = require('ws')
-// const io = new WebSocket.Server({server});
+const WebSocket = require('ws')
+const io = new WebSocket.Server({server});
 const pairs = ['BTC-USD', 'ETH-USD', 'LTC-USD'];
 const clients = [];
 
@@ -22,13 +21,19 @@ app.get('/', (req, res) => {
 });
 
 io.on('connection', (socket) => {
+    console.log('user connected');
     let clientPair = [];
     let interval;
     let timeForInterval = 250;
-    let clientId = socket.id;
-    clients.push({id: clientId, time: socket.handshake.time,info: socket.handshake.headers['user-agent']});
-    console.log('a user connected');
-    socket.on('disconnect', () => {
+    let clientId = socket.id ? socket.id : new Date().valueOf();
+    clients.push(
+        {
+            id: clientId,
+            time: new Date(),
+            info: `id = ${clientId}`
+        }
+    );
+    socket.on('close', () => {
         console.log('user disconnected');
         removeUser(clientId)
     });
@@ -38,7 +43,7 @@ io.on('connection', (socket) => {
         let msg_1 = msg.split(' ')[0];
         let msg_2 = msg.split(' ')[1];
 
-        if (msg_1 === 'XRP-USD') socket.emit('event','error: XRP-USD is not a valid product')
+        if (msg_1 === 'XRP-USD') socket.send('error: XRP-USD is not a valid product')
 
         if (pairs.includes(msg_1)) {
             let index = clientPair.findIndex(item => item.pair === msg_1)
@@ -63,7 +68,7 @@ io.on('connection', (socket) => {
 
         if (msg_1 === 'system' && !msg_2) {
             for (let item of clients ) {
-                socket.emit('event', `User: ${item.info}, Subscription start: ${item.time}`);
+                socket.send(`User: ${item.info}, Subscription start: ${item.time}`);
             }
             return;
         }
@@ -80,9 +85,9 @@ io.on('connection', (socket) => {
                     if (tickers[item.pair]) {
                         let message = (!item.view) ?`${item.pair} = ${tickers[item.pair].price} (${date})` :
                         `${item.pair} (price = ${tickers[item.pair].price}; timestamp = ${new Date(tickers[item.pair].time).valueOf()}; size: ${tickers[item.pair].size || tickers[item.pair].remaining_size} )`
-                        socket.emit('event', message);
+                        socket.send( message);
                     } else {
-                        socket.emit('event', `We do not have data for this pair ${item.pair}`);
+                        socket.send(`We do not have data for this pair ${item.pair}`);
                     }
                 }
             }, timeForInterval);

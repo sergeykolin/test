@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Socket.IO chat</title>
+    <title>Socket</title>
     <style>
       body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 
@@ -21,9 +21,8 @@
       <input id="input" autocomplete="off" /><button>Send</button>
     </form>
 
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-      const socket = io();
+      var socket = new WebSocket('ws://localhost:3000/socket.io/?EIO=3&transport=websocket');
 
       let form = document.getElementById('form');
       let input = document.getElementById('input');
@@ -31,18 +30,23 @@
       form.addEventListener('submit', function(e) {
         e.preventDefault();
         if (input.value) {
-          socket.emit('message', input.value);
+          socket.send(input.value);
           input.value = '';
         }
       });
 
-      socket.on('event', function(msg) {
+      socket.addEventListener('message', function(msg) {
         let item_  = document.getElementsByName('li');
         let item = document.createElement('li');
-        item.textContent = msg;
+        item.textContent = msg.data;
         messages.appendChild(item);
         window.scrollTo(0, document.body.scrollHeight);
       });
+
+      window.onunload = function() {
+          console.log('333')
+          socket.close();
+      }
     </script>
   </body>
 </html>
