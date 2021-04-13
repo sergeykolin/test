@@ -62,7 +62,7 @@ io.on('connection', (socket) => {
         }
 
         if (msg_1 === 'quit') {
-            socket.off('message', (cb) => {console.log('client quit')});
+            socket.close();
             removeUser(clientId);
             if (interval) clearInterval(interval);
             return;
