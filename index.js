@@ -51,10 +51,12 @@ io.on('connection', (socket) => {
             if (!msg_2 || msg_2 === 'm') {
                 if (index < 0 ) {
                     clientPair.push(pair);
-                } else {
+                }
+                if (index >= 0) {
                     clientPair[index].view = pair.view;
                 }
-            } else if (msg_2 === 'u' && index >= 0) {
+            }
+            if (msg_2 === 'u' && index >= 0) {
                 clientPair.splice(index, 1);
             }
         }
@@ -86,7 +88,8 @@ io.on('connection', (socket) => {
                         let message = (!item.view) ?`${item.pair} = ${tickers[item.pair].price} (${date})` :
                         `${item.pair} (price = ${tickers[item.pair].price}; timestamp = ${new Date(tickers[item.pair].time).valueOf()}; size: ${tickers[item.pair].size || tickers[item.pair].remaining_size} )`
                         socket.send( message);
-                    } else {
+                    }
+                    if (!tickers[item.pair]) {
                         socket.send(`We do not have data for this pair ${item.pair}`);
                     }
                 }
