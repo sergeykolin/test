@@ -2,7 +2,7 @@
 const CoinbaseService = require('./services/service');
 const logService = require('./services/log-service');
 
-module.exports = class SocetCoinBase {
+module.exports = class SocketClient {
     constructor(socket) {
         this.socket = socket;
         this.clientPair = [];
@@ -25,27 +25,27 @@ module.exports = class SocetCoinBase {
 
     readMsg(msg) {
         if (!msg || typeof msg !== 'string') return;
-        let msg_1 = msg.split(' ')[0];
-        let msg_2 = msg.split(' ')[1];
+        let symbol = msg.split(' ')[0];
+        let action = msg.split(' ')[1];
 
-        if (msg_1 === 'XRP-USD') this.send('error: XRP-USD is not a valid product')
+        if (symbol === 'XRP-USD') this.send('error: XRP-USD is not a valid product')
 
-        if (this.pairs.includes(msg_1)) {
-            this.parsePairMessage(msg_1, msg_2);
+        if (this.pairs.includes(symbol)) {
+            this.parsePairMessage(symbol, action);
         }
 
-        if (msg_1 === 'quit') {
+        if (symbol === 'quit') {
             this.quit();
             return;
         }
 
-        if (msg_1 === 'system' && !msg_2) {
+        if (symbol === 'system' && !action) {
             this.systemView()
             return;
         }
 
-        if (msg_1 === 'system' && msg_2 && !isNaN(msg_2)) {
-            this.timeForInterval = parseInt(msg_2);
+        if (symbol === 'system' && action && !isNaN(action)) {
+            this.timeForInterval = parseInt(action);
         }
 
         if (this.clientPair.length) {
@@ -53,10 +53,10 @@ module.exports = class SocetCoinBase {
         }
     }
 
-    parsePairMessage(msg_1, msg_2) {
-        let index = this.clientPair.findIndex(item => item.pair === msg_1)
-        let pair = {pair: msg_1, view: (msg_2 === 'm') ? 'matches view': null};
-        if (!msg_2 || msg_2 === 'm') {
+    parsePairMessage(symbol, action) {
+        let index = this.clientPair.findIndex(item => item.pair === symbol)
+        let pair = {pair: symbol, view: (action === 'm') ? 'matches view': null};
+        if (!action || action === 'm') {
             if (index < 0 ) {
                 this.clientPair.push(pair);
             }
@@ -64,7 +64,7 @@ module.exports = class SocetCoinBase {
                 this.clientPair[index].view = pair.view;
             }
         }
-        if (msg_2 === 'u' && index >= 0) {
+        if (action === 'u' && index >= 0) {
             this.clientPair.splice(index, 1);
         }
         this.coinbaseService.updateClientPairs(this.clientId, this.clientPair)

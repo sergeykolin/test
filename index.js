@@ -4,7 +4,7 @@ const http = require('http');
 const server = http.createServer(app);
 const WebSocket = require('ws')
 const io = new WebSocket.Server({server});
-const SocketCoinBase = require('./socket');
+const SocketClient = require('./socket-client');
 const logService = require('./services/log-service');
 
 
@@ -14,7 +14,7 @@ app.get('/', (req, res) => {
 
 io.on('connection', (socket) => {
     logService('user connected');
-    const clientSocket = new SocketCoinBase(socket);
+    const clientSocket = new SocketClient(socket);
 });
 
 server.listen(3000, () => {
