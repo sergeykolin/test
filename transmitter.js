@@ -1,17 +1,17 @@
 'use strict';
-const CoinbaseService = require('./services/service');
+const CoinbaseTransmitter = require('./services/coinbaseTransmitter');
 const logService = require('./services/log-service');
 
-module.exports = class SocketClient {
+module.exports = class Transmitter {
     constructor(socket) {
         this.socket = socket;
         this.clientPair = [];
         this.interval = null;
         this.timeForInterval = 250;
         this.clientId = socket.id ? socket.id : new Date().valueOf();
-        this.coinbaseService = new CoinbaseService()
-        this.coinbaseService.addClient(this.clientId);
-        this.pairs = this.coinbaseService.getPairs();
+        this.coinbaseTransmitter = new CoinbaseTransmitter()
+        this.coinbaseTransmitter.addClient(this.clientId);
+        this.pairs = this.coinbaseTransmitter.getPairs();
 
         this.socket.on('close', () => {
             logService('user disconnected');
@@ -67,7 +67,7 @@ module.exports = class SocketClient {
         if (action === 'u' && index >= 0) {
             this.clientPair.splice(index, 1);
         }
-        this.coinbaseService.updateClientPairs(this.clientId, this.clientPair)
+        this.coinbaseTransmitter.updateClientPairs(this.clientId, this.clientPair)
     }
 
     quit() {
@@ -77,11 +77,11 @@ module.exports = class SocketClient {
     }
 
     removeClient() {
-        this.coinbaseService.removeClient(this.clientId);
+        this.coinbaseTransmitter.removeClient(this.clientId);
     }
 
     systemView() {
-        const clients = this.coinbaseService.getClients();
+        const clients = this.coinbaseTransmitter.getClients();
         for (let item of clients ) {
             let pairs = item.pairs.length ? item.pairs : 'none'
             this.send(`User: ${item.info}, Connection start: ${item.time}, subscriptions: ${pairs}`);
@@ -93,7 +93,7 @@ module.exports = class SocketClient {
     }
 
     sendMessages() {
-        const tickers = this.coinbaseService.getTikers();
+        const tickers = this.coinbaseTransmitter.getTikers();
         if (this.interval) {
             clearInterval(this.interval);
         }

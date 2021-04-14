@@ -16,7 +16,7 @@ websocket.on('message', data => {
     tickers[data.product_id] = data;
 });
 
-module.exports = class ServiceCoinBase {
+module.exports = class CoinbaseTransmitter {
     constructor(){};
 
     removeClient(clientId) {

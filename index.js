@@ -3,8 +3,8 @@ const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const WebSocket = require('ws')
-const io = new WebSocket.Server({server});
-const SocketClient = require('./socket-client');
+const ws = new WebSocket.Server({server});
+const Transmitter = require('./transmitter');
 const logService = require('./services/log-service');
 
 
@@ -12,9 +12,9 @@ app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
 
-io.on('connection', (socket) => {
+ws.on('connection', (socket) => {
     logService('user connected');
-    const clientSocket = new SocketClient(socket);
+    new Transmitter(socket);
 });
 
 server.listen(3000, () => {
