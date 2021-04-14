@@ -26,12 +26,10 @@ module.exports = class Transmitter {
     readMsg(msg) {
         if (!msg || typeof msg !== 'string') return;
         let symbol = msg.split(' ')[0];
-        let action = msg.split(' ')[1];
-
-        if (symbol === 'XRP-USD') this.send('error: XRP-USD is not a valid product')
+        let param = msg.split(' ')[1];
 
         if (this.pairs.includes(symbol)) {
-            this.parsePairMessage(symbol, action);
+            this.parsePairMessage(symbol, param);
         }
 
         if (symbol === 'quit') {
@@ -39,13 +37,8 @@ module.exports = class Transmitter {
             return;
         }
 
-        if (symbol === 'system' && !action) {
-            this.systemView()
-            return;
-        }
-
-        if (symbol === 'system' && action && !isNaN(action)) {
-            this.timeForInterval = parseInt(action);
+        if (symbol === 'system') {
+            this.systemParse(param);
         }
 
         if (this.clientPair.length) {
@@ -53,18 +46,30 @@ module.exports = class Transmitter {
         }
     }
 
-    parsePairMessage(symbol, action) {
+    systemParse(param) {
+        if (param && !isNaN(param)) {
+            this.updateInterval(param);
+        } else {
+            this.systemView()
+            return;
+        }
+    }
+
+    updateInterval(time) {
+        this.timeForInterval = parseInt(time);
+    }
+
+    parsePairMessage(symbol, param) {
         let index = this.clientPair.findIndex(item => item.pair === symbol)
-        let pair = {pair: symbol, view: (action === 'm') ? 'matches view': null};
-        if (!action || action === 'm') {
+        let pair = {pair: symbol, view: (param === 'm') ? 'matches view': null};
+        if (!param || param === 'm') {
             if (index < 0 ) {
                 this.clientPair.push(pair);
-            }
-            if (index >= 0) {
+            } else {
                 this.clientPair[index].view = pair.view;
             }
         }
-        if (action === 'u' && index >= 0) {
+        if (param === 'u' && index >= 0) {
             this.clientPair.splice(index, 1);
         }
         this.coinbaseTransmitter.updateClientPairs(this.clientId, this.clientPair)
@@ -92,6 +97,10 @@ module.exports = class Transmitter {
         this.socket.send( message);
     }
 
+    send(message) {
+        this.socket.send( message);
+    }
+
     sendMessages() {
         const tickers = this.coinbaseTransmitter.getTikers();
         if (this.interval) {
@@ -104,8 +113,7 @@ module.exports = class Transmitter {
                     let message = (!item.view) ?`${item.pair} = ${tickers[item.pair].price} (${date})` :
                     `${item.pair} (price = ${tickers[item.pair].price}; timestamp = ${new Date(tickers[item.pair].time).valueOf()}; size: ${tickers[item.pair].size || tickers[item.pair].remaining_size} )`;
                     this.send(message);
-                }
-                if (!tickers[item.pair]) {
+                } else {
                     this.send(`We do not have data for this pair ${item.pair}`);
                 }
             }

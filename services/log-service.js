@@ -1,3 +1,4 @@
+const log = require('../libs/log');
 module.exports = function(message) {
-    console.log(message);
+    log(message);
 }

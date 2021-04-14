@@ -1,5 +1,6 @@
 const Gdax = require('gdax');
-const pairs = ['BTC-USD', 'ETH-USD', 'LTC-USD'];
+const logService = require('./log-service');
+const pairs = ['BTC-USD', 'ETH-USD', 'LTC-USD', 'XRP-USD'];
 const clients = [];
 const tickers = [];
 const websocket = new Gdax.WebsocketClient(
@@ -8,12 +9,15 @@ const websocket = new Gdax.WebsocketClient(
     null,
     {"channels": ["full"]}
 );
-
 websocket.on('message', data => {
     if (!data.product_id || !data.price) {
         return;
     }
     tickers[data.product_id] = data;
+});
+
+websocket.on('error', error => {
+    logService(error)
 });
 
 module.exports = class CoinbaseTransmitter {
