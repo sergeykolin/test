@@ -22,7 +22,7 @@
     </form>
 
     <script>
-      var socket = new WebSocket('ws://localhost:3000/socket.io/?EIO=3&transport=websocket');
+      let socket = new WebSocket('ws://localhost:3000/socket.io/?EIO=3&transport=websocket');
 
       let form = document.getElementById('form');
       let input = document.getElementById('input');
