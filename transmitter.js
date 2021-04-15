@@ -25,18 +25,18 @@ module.exports = class Transmitter {
 
     readMsg(msg) {
         if (!msg || typeof msg !== 'string') return;
-        const [symbol, param] = msg.split(' ');
+        const [command, param] = msg.split(' ');
 
-        if (this.pairs.includes(symbol)) {
-            this.parsePairMessage(symbol, param);
+        if (this.pairs.includes(command)) {
+            this.parsePairMessage(command, param);
         }
 
-        if (symbol === 'quit') {
+        if (command === 'quit') {
             this.quit();
             return;
         }
 
-        if (symbol === 'system') {
+        if (command === 'system') {
             this.systemParse(param);
         }
 
@@ -52,10 +52,6 @@ module.exports = class Transmitter {
             this.systemView()
             return;
         }
-    }
-
-    updateInterval(time) {
-        this.timeForInterval = parseInt(time);
     }
 
     parsePairMessage(symbol, param) {
@@ -74,10 +70,18 @@ module.exports = class Transmitter {
         this.coinbaseTransmitter.updateClientPairs(this.clientId, this.clientPair)
     }
 
+    updateInterval(time) {
+        this.timeForInterval = parseInt(time);
+    }
+
+    clearInterval() {
+        if (this.interval) clearInterval(this.interval);
+    }
+
     quit() {
         this.socket.close();
         this.removeClient();
-        if (this.interval) clearInterval(this.interval);
+        this.clearInterval();
     }
 
     removeClient() {
@@ -102,9 +106,7 @@ module.exports = class Transmitter {
 
     sendMessages() {
         const tickers = this.coinbaseTransmitter.getTikers();
-        if (this.interval) {
-            clearInterval(this.interval);
-        }
+        this.clearInterval();
         this.interval = setInterval(() => {
             const date = new Date();
             for (let item of this.clientPair) {
