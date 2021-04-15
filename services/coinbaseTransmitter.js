@@ -24,7 +24,7 @@ module.exports = class CoinbaseTransmitter {
     constructor(){};
 
     removeClient(clientId) {
-        let index = clients.findIndex(item => item.id === clientId);
+        const index = clients.findIndex(item => item.id === clientId);
         if (index >= 0) {
             clients.splice(index, 1);
         }
@@ -42,7 +42,7 @@ module.exports = class CoinbaseTransmitter {
     }
 
     updateClientPairs(clientId, pairs) {
-        let index = clients.findIndex(item => item.id === clientId);
+        const index = clients.findIndex(item => item.id === clientId);
         if (index >= 0) {
             clients[index].pairs = pairs.map(item => item.pair);
         }

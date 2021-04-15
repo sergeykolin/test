@@ -25,8 +25,7 @@ module.exports = class Transmitter {
 
     readMsg(msg) {
         if (!msg || typeof msg !== 'string') return;
-        let symbol = msg.split(' ')[0];
-        let param = msg.split(' ')[1];
+        const [symbol, param] = msg.split(' ');
 
         if (this.pairs.includes(symbol)) {
             this.parsePairMessage(symbol, param);
@@ -60,8 +59,8 @@ module.exports = class Transmitter {
     }
 
     parsePairMessage(symbol, param) {
-        let index = this.clientPair.findIndex(item => item.pair === symbol)
-        let pair = {pair: symbol, view: (param === 'm') ? 'matches view': null};
+        const index = this.clientPair.findIndex(item => item.pair === symbol)
+        const pair = {pair: symbol, view: (param === 'm') ? 'matches view': null};
         if (!param || param === 'm') {
             if (index < 0 ) {
                 this.clientPair.push(pair);
@@ -88,7 +87,7 @@ module.exports = class Transmitter {
     systemView() {
         const clients = this.coinbaseTransmitter.getClients();
         for (let item of clients ) {
-            let pairs = item.pairs.length ? item.pairs : 'none'
+            const pairs = item.pairs.length ? item.pairs : 'none'
             this.send(`User: ${item.info}, Connection start: ${item.time}, subscriptions: ${pairs}`);
         }
     }
@@ -107,10 +106,10 @@ module.exports = class Transmitter {
             clearInterval(this.interval);
         }
         this.interval = setInterval(() => {
-            let date = new Date();
+            const date = new Date();
             for (let item of this.clientPair) {
                 if (tickers[item.pair]) {
-                    let message = (!item.view) ?`${item.pair} = ${tickers[item.pair].price} (${date})` :
+                    const message = (!item.view) ?`${item.pair} = ${tickers[item.pair].price} (${date})` :
                     `${item.pair} (price = ${tickers[item.pair].price}; timestamp = ${new Date(tickers[item.pair].time).valueOf()}; size: ${tickers[item.pair].size || tickers[item.pair].remaining_size} )`;
                     this.send(message);
                 } else {
